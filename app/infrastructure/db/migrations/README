@@ -1,0 +1,8 @@
+# Alembic migrations for project
+
+This directory contains all database migrations.
+
+Commands:
+  alembic -c db/alembic.ini revision --autogenerate -m "description"
+  alembic -c db/alembic.ini upgrade head
+  alembic -c db/alembic.ini downgrade -1
