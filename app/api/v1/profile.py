@@ -1,20 +1,29 @@
-"""Профиль/сводка (1.5)."""
+"""Профиль/сводка (1.5). Читаем счётчики из БД."""
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_user
+from app.infrastructure.db.repositories.requests_repo import RequestsRepo
+from app.infrastructure.db.session import get_session
 from app.schemas.common import User
 from app.schemas.profile import Counters, ProfileSummary
-from app.services.store import store
 
 router = APIRouter()
 
 
 @router.get("/profile/summary", response_model=ProfileSummary)
-def profile_summary(user: User = Depends(require_user)) -> ProfileSummary:
-    """Вернуть краткую информацию профиля для шапки/кабинета."""
-    reqs = store.requests_by_owner(user.id)
-    active = sum(1 for r in reqs if r["status"] in {"PENDING", "RUNNING", "ANALYZING"})
+async def profile_summary(
+    user: User = Depends(require_user),
+    session: AsyncSession = Depends(get_session),
+) -> ProfileSummary:
+    """Вернуть краткую информацию профиля для шапки/кабинета на основе БД."""
+    repo = RequestsRepo(session)
+    reqs = await repo.by_owner(user.id)
+
+    active_statuses = {"PENDING", "RUNNING", "ANALYZING"}
+    active = sum(1 for r in reqs if r.status in active_statuses)
+
     return ProfileSummary(
         user=user,
         counters=Counters(requests_total=len(reqs), active=active),

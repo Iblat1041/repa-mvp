@@ -23,23 +23,70 @@
 ## 🧩 Архитектура проекта
 
 ```bash
-repa_mvp/
-├── app/
-│   ├── api/v1/               # FastAPI эндпоинты (publications, requests, analytics, recommendations)
-│   ├── core/                 # Config, logging, security, scheduler
-│   ├── domains/              # Бизнес-логика (entities, services, protocols)
-│   ├── infrastructure/       # Адаптеры: БД, Scrapy, ML, Redis
-│   ├── tasks/                # Celery: run_spider, analyze_batch, refresh_metrics
-│   ├── schemas/              # Pydantic-схемы запросов/ответов API
-│   └── main.py               # Точка входа FastAPI-приложения
-│
-├── db/migrations/            # Alembic-миграции
-├── tests/                    # Unit / Integration / E2E
-├── docker/                   # Dockerfile'ы по сервисам
-├── docker-compose.yml        # Orchestration: API + DB + Redis/RabbitMQ + Worker
-├── pyproject.toml            # Зависимости и форматирование
-├── .env.example              # Пример конфигурации окружения
-└── README.md                 # Документация
+.
+├── app/                                 # Основной код приложения
+│   ├── api/v1/                         # Эндпоинты API (v1)
+│   │   ├── analytics.py                # Аналитика и метрики
+│   │   ├── auth.py                     # Авторизация (JWT)
+│   │   ├── demo.py                     # Демо-эндпоинты
+│   │   ├── payments.py                 # Платежи и биллинг
+│   │   ├── profile.py                  # Профиль пользователя
+│   │   ├── promocodes.py               # Промокоды
+│   │   ├── publications.py             # Публикации
+│   │   ├── requests.py                 # Запросы на сбор данных
+│   │   ├── tariffs.py                  # Тарифы
+│   │   ├── routers.py                  # Маршрутизация API
+│   ├── core/                           # Ядро приложения
+│   │   ├── config.py                   # Настройки (Pydantic, .env)
+│   │   ├── logging.py                  # Логирование
+│   │   ├── security.py                 # JWT, CORS, безопасность
+│   ├── domains/                        # Бизнес-логика (DDD)
+│   │   ├── analytics/                  # Метрики
+│   │   ├── publications/               # Публикации
+│   │   ├── recommendations/            # Рекомендации (ИИ)
+│   │   └── requests/                   # Запросы
+│   ├── infrastructure/                 # Инфраструктура
+│   │   ├── cache/redis_client.py       # Redis-клиент
+│   │   ├── db/                         # База данных
+│   │   │   ├── alembic.ini             # Alembic для миграций
+│   │   │   ├── base.py                 # База SQLAlchemy
+│   │   │   ├── init_db.py              # Инициализация БД
+│   │   │   ├── session.py              # Асинхронные сессии
+│   │   │   ├── tables.py               # ORM-модели
+│   │   │   ├── migrations/             # Миграции
+│   │   │   │   ├── env.py
+│   │   │   │   ├── README
+│   │   │   │   ├── script.py.mako
+│   │   │   │   ├── init.py
+│   │   │   │   └── versions/
+│   │   │   ├── repositories/           # Репозитории
+│   │   │   │   ├── demo_repo.py
+│   │   │   │   ├── payments_repo.py
+│   │   │   │   ├── promos_repo.py
+│   │   │   │   ├── publications_repo.py
+│   │   │   │   └── requests_repo.py
+│   │   ├── ml/sentiment_transformers.py # Анализ тональности
+│   │   └── parsers/                    # Парсинг
+│   │       ├── run_scrapy.py           # Запуск Scrapy
+│   │       └── scrapy_app/             # Scrapy-пауки
+│   │           ├── scrapy_app/
+│   │           └── {scrapy.cfg}        # Конфигурация Scrapy
+│   ├── schemas/                        # Pydantic-схемы API
+│   │   ├── auth.py                     # Схемы авторизации
+│   │   ├── common.py                   # Общие схемы
+│   │   ├── profile.py                  # Схемы профиля
+│   │   ├── promos.py                   # Схемы промокодов
+│   │   ├── publications.py             # Схемы публикаций
+│   │   ├── requests.py                 # Схемы запросов
+│   │   ├── tariffs.py                  # Схемы тарифов
+│   ├── tasks/                          # Фоновые задачи
+│   ├── workers/                        # Воркеры
+│   │   └── init.py                     # Инициализация воркеров
+│   ├── main.py                         # Точка входа FastAPI
+│   └── pycache/main.cpython-312.pyc
+├── docker-compose.dev.yml              # Docker Compose для dev
+├── requirements.txt                    # Зависимости проекта
+└── README.md                           # Документация
 
 ```
 
@@ -75,4 +122,17 @@ uvicorn app.main:app --reload
 ```bash
 uvicorn app.main:app --reload
 
+```
+
+```bash
+export PYTHONPATH=$PYTHONPATH:$PWD
+alembic -c app/infrastructure/db/alembic.ini revision --autogenerate -m "Initial migration"
+```
+```bash
+export PYTHONPATH=$PYTHONPATH:$PWD
+alembic -c app/infrastructure/db/alembic.ini upgrade head
+```
+```bash
+export PYTHONPATH=$PYTHONPATH:$PWD
+export PYTHONPATH=$PYTHONPATH:/home/iblat/Documents/Develop/repa-mvp
 ```
