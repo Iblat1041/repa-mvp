@@ -1,5 +1,3 @@
-"""Создание и выдача асинхронных сессий SQLAlchemy."""
-
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from app.core.config import settings
@@ -15,7 +13,6 @@ def get_engine() -> AsyncEngine:
         _engine = create_async_engine(
             settings.db_url,
             echo=settings.echo_sql,
-            pool_size=settings.pool_size,
         )
     return _engine
 
