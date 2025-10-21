@@ -6,10 +6,17 @@
 
 ---
 
-## 🧰 Технологии
+## Содержание
+- [Архитектура проекта](#архитектура-проекта)
+- [Быстрый старт (локально)](#локальный-запуск)
+- [Миграции Alembic](#миграции-alembic)
+- [Документация API](#api-и-документация)
+- [Лицензия](#лицензия)
+
+## Технологии
 
 - Python 3.11+
-- FastAPI
+- FastAPI 0.115.2
 - PostgreSQL
 - Redis
 - Celery
@@ -20,7 +27,7 @@
 
 ---
 
-## 🧩 Архитектура проекта
+## Архитектура проекта
 
 ```bash
 .
@@ -90,7 +97,7 @@
 
 ```
 
-## Быстрый старт (локально)
+## Локальный запуск
 
 ```bash
 # 1. Клонирование проекта
@@ -109,6 +116,15 @@ cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
+## Миграции-alembic
+```
+export PYTHONPATH=$PYTHONPATH:$PWD
+alembic -c app/infrastructure/db/alembic.ini revision --autogenerate -m "Initial migration"
+
+export PYTHONPATH=$PYTHONPATH:$PWD
+alembic -c app/infrastructure/db/alembic.ini upgrade head
+```
+
 ## API и документация
 
 После запуска сервера:
@@ -119,24 +135,5 @@ uvicorn app.main:app --reload
 
 ---
 
-```bash
-uvicorn app.main:app --reload
-
-```
-
-```bash
-export PYTHONPATH=$PYTHONPATH:$PWD
-alembic -c app/infrastructure/db/alembic.ini revision --autogenerate -m "Initial migration"
-```
-```bash
-export PYTHONPATH=$PYTHONPATH:$PWD
-alembic -c app/infrastructure/db/alembic.ini upgrade head
-```
-```bash
-export PYTHONPATH=$PYTHONPATH:$PWD
-export PYTHONPATH=$PYTHONPATH:/home/iblat/Documents/Develop/repa-mvp
-```
-
-```bash 
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+## Лицензия
+© 2025 REPA Team.
