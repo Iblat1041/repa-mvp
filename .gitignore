@@ -131,6 +131,3 @@ dmypy.json
 
 static/
 media/
-
-# PostgreSQL data directory
-infra/pgdata/repa.sqlite3

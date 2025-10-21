@@ -24,7 +24,9 @@ async def issue_promo(payload: PromoIssueIn, session: AsyncSession = Depends(get
 
 
 @router.get("/promocodes/validate", response_model=PromoValidateOut)
-async def validate_promo(code: str = Query(...), session: AsyncSession = Depends(get_session)) -> PromoValidateOut:
+async def validate_promo(
+    code: str = Query(...),
+    session: AsyncSession = Depends(get_session)) -> PromoValidateOut:
     """Проверить валидность промокода."""
     info = await PromosRepo(session).validate(code)
     return PromoValidateOut(**info)
@@ -32,7 +34,10 @@ async def validate_promo(code: str = Query(...), session: AsyncSession = Depends
 
 @router.post("/promocodes/redeem")
 async def redeem_promo(
-    code: str = Query(...), request_id: str = Query(...), session: AsyncSession = Depends(get_session)
+    code: str = Query(...),
+    request_id: str = Query(...),
+    session: AsyncSession = Depends(get_session,
+    )
 ) -> dict:
     """Погасить промокод (привязка к заявке делается на уровне RequestDB.applied_promo по твоей бизнес-логике)."""
     ok = await PromosRepo(session).redeem(code)
