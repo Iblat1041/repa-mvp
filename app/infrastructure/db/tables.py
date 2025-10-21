@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from app.core.utctime import utcnow
 from sqlalchemy import (
     String, Integer, Text, DateTime, Date, Boolean, JSON,
     ForeignKey, UniqueConstraint, Index, CheckConstraint
@@ -12,7 +13,7 @@ class UserDB(Base):
     # Переопределяем PK на строковый
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 # ---- Requests ----
 class RequestDB(Base):
@@ -29,8 +30,8 @@ class RequestDB(Base):
     progress: Mapped[int] = mapped_column(Integer, default=0)
     eta_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     applied_promo: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
     __table_args__ = (
         CheckConstraint("progress >= 0 AND progress <= 100", name="chk_progress_bounds"),
         Index("ix_requests_period", "period_start", "period_end"),
@@ -70,12 +71,11 @@ class PromoCodeDB(Base):
 # ---- Payments ----
 class PaymentDB(Base):
     __tablename__ = "payments"
-    # Можно оставить дефолтный INTEGER PK (id) из PreBase
     request_id: Mapped[str] = mapped_column(String(32), ForeignKey("requests.id", ondelete="CASCADE"), index=True)
     provider: Mapped[str] = mapped_column(String(32), default="stub")
     link: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16), default="created")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     __table_args__ = (UniqueConstraint("request_id", name="uq_payment_request"),)
 
 # ---- Demos ----

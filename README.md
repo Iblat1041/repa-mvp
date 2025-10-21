@@ -136,3 +136,7 @@ alembic -c app/infrastructure/db/alembic.ini upgrade head
 export PYTHONPATH=$PYTHONPATH:$PWD
 export PYTHONPATH=$PYTHONPATH:/home/iblat/Documents/Develop/repa-mvp
 ```
+
+```bash 
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
