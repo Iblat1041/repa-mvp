@@ -1,0 +1,617 @@
+{
+  "info": {
+    "name": "REPA MVP — 1.x Onboarding",
+    "_postman_id": "8b8e8b88-1111-2222-3333-44445555aaaa",
+    "description": "Коллекция Postman для фич 1.1–1.8 (Главная/Онбординг): валидация запроса, выбор тарифа, запуск анализа, авторизация, профиль, фильтры, демо, промокоды.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "request_id",
+      "value": ""
+    },
+    {
+      "key": "demo_request_id",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": "user@example.com"
+    },
+    {
+      "key": "code",
+      "value": "000000"
+    },
+    {
+      "key": "promo_code",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1.1 Поле для запроса",
+      "item": [
+        {
+          "name": "Validate query (1.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/requests/validate-query",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "requests",
+                "validate-query"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"open ai repa\"\n}"
+            },
+            "description": "Валидация/нормализация поисковой фразы перед созданием заявки."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('ok:true', () => pm.expect(j.ok).to.be.true);",
+                  "pm.test('tokens array', () => pm.expect(j.tokens).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1.2 Выбор тарифа",
+      "item": [
+        {
+          "name": "Tariffs (WEEK/MONTH/QUARTER)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/tariffs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "tariffs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('has items', () => pm.expect(j.items).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1.3 Начать анализ",
+      "item": [
+        {
+          "name": "Create request (1.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "requests"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"open ai repa\",\n  \"tariff_code\": \"MONTH\",\n  \"language\": \"ru\",\n  \"sources\": [\n    \"rss\",\n    \"web\"\n  ],\n  \"apply_promocode\": null\n}"
+            },
+            "description": "Создать заявку и запустить фоновую обработку; вернёт request_id."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('202 Accepted', () => pm.response.to.have.status(202));",
+                  "const j = pm.response.json();",
+                  "pm.environment.set('request_id', j.request_id);",
+                  "pm.test('has price', () => pm.expect(j).to.have.property('price'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request status: poll until READY",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/requests/{{request_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "requests",
+                "{{request_id}}",
+                "status"
+              ]
+            },
+            "description": "Опрос статуса заявки. В Runner поставьте delay 500–1000 мс и повторяйте до READY."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json();",
+                  "pm.test('has status', () => pm.expect(s).to.have.property('status'));",
+                  "if (s.status === 'READY') { postman.setNextRequest(null); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publications → Результаты поиска",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/publications?request_id={{request_id}}&limit=10&sort=-published_at",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "publications"
+              ],
+              "query": [
+                {
+                  "key": "request_id",
+                  "value": "{{request_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "-published_at"
+                }
+              ]
+            },
+            "description": "Получить результаты. Если total=0 — на фронте показываем «Нет актуальных данных»."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('has total', () => pm.expect(r).to.have.property('total'));",
+                  "pm.test('items array', () => pm.expect(r.items).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1.4 Кнопка авторизации",
+      "item": [
+        {
+          "name": "Login (email + code)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"code\": \"{{code}}\"\n}"
+            },
+            "description": "Получить JWT. В демо-режиме код = 000000."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.environment.set('access_token', d.access_token);",
+                  "if (d.user && d.user.id) pm.environment.set('user_id', d.user.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1.5 Кнопка профиля",
+      "item": [
+        {
+          "name": "Profile summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/profile/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "profile",
+                "summary"
+              ]
+            },
+            "description": "Сводка профиля: counters, balance, user."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('has user', () => pm.expect(j).to.have.property('user'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1.6 Кнопка «Фильтры»",
+      "item": [
+        {
+          "name": "Publications with filters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/publications?request_id={{request_id}}&date_from=2025-10-01T00:00:00Z&date_to=2025-10-21T23:59:59Z&source=rss,web&sentiment=neg,neu,pos&lang=ru,en&limit=6&offset=0&sort=-published_at",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "publications"
+              ],
+              "query": [
+                {
+                  "key": "request_id",
+                  "value": "{{request_id}}"
+                },
+                {
+                  "key": "date_from",
+                  "value": "2025-10-01T00:00:00Z"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2025-10-21T23:59:59Z"
+                },
+                {
+                  "key": "source",
+                  "value": "rss,web"
+                },
+                {
+                  "key": "sentiment",
+                  "value": "neg,neu,pos"
+                },
+                {
+                  "key": "lang",
+                  "value": "ru,en"
+                },
+                {
+                  "key": "limit",
+                  "value": "6"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "-published_at"
+                }
+              ]
+            },
+            "description": "Те же публикации, но с параметрами фильтрации: период/источники/тональность/языки/сортировка."
+          }
+        }
+      ]
+    },
+    {
+      "name": "1.7 Кнопка «Демо»",
+      "item": [
+        {
+          "name": "Demo: start",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/demo/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "demo",
+                "start"
+              ]
+            },
+            "description": "Создать демо-сессию и получить demo_request_id."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.environment.set('demo_request_id', j.demo_request_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publications (demo_request_id)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/publications?request_id={{demo_request_id}}&limit=6",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "publications"
+              ],
+              "query": [
+                {
+                  "key": "request_id",
+                  "value": "{{demo_request_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "6"
+                }
+              ]
+            },
+            "description": "Проверить, что демо-id работает так же, как request_id."
+          }
+        },
+        {
+          "name": "Analytics summary (demo_request_id)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/summary?request_id={{demo_request_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "analytics",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "request_id",
+                  "value": "{{demo_request_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1.8 Кнопка «Получить промокод»",
+      "item": [
+        {
+          "name": "Promocode: Issue (generate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/promocodes/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "promocodes",
+                "request"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"reason\": \"onboarding_banner\"\n}"
+            },
+            "description": "Выдать одноразовый промокод (для авторизованного пользователя)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.environment.set('promo_code', j.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Promocode: Validate",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/promocodes/validate?code={{promo_code}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "promocodes",
+                "validate"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "{{promo_code}}"
+                }
+              ]
+            },
+            "description": "Проверить валидность промокода (valid/expired/redeemed)."
+          }
+        },
+        {
+          "name": "Promocode: Redeem (bind to request)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/v1/promocodes/redeem?code={{promo_code}}&request_id={{request_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "promocodes",
+                "redeem"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "{{promo_code}}"
+                },
+                {
+                  "key": "request_id",
+                  "value": "{{request_id}}"
+                }
+              ]
+            },
+            "description": "Погасить промокод и привязать к заявке (упрощённо)."
+          }
+        }
+      ]
+    }
+  ]
+}

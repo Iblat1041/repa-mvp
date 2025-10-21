@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from app.core.utctime import utcnow
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +23,7 @@ class DemoRepo:
         did = self._generate_id()
         row = DemoDB(
             id=did,
-            expires_at=datetime.now(tz=timezone.utc) + timedelta(days=settings.demo_ttl_days),
+            expires_at=utcnow() + timedelta(days=settings.demo_ttl_days),
             max_items=20,
         )
         self.session.add(row)
@@ -33,7 +34,10 @@ class DemoRepo:
         """Проверить, что демо существует и не истекло."""
         res = await self.session.execute(select(DemoDB).where(DemoDB.id == demo_id))
         row = res.scalar_one_or_none()
-        return bool(row and row.expires_at > datetime.now(tz=timezone.utc))
+        if not row:
+            return False
+        exp = row.expires_at if row.expires_at.tzinfo is not None else row.expires_at.replace(tzinfo=timezone.utc)
+        return exp > utcnow()
 
     async def meta(self, demo_id: str) -> dict:
         """Вернуть метаданные демо."""
